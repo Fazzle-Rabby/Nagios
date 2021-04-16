@@ -1,0 +1,180 @@
+*** Follow the steps in the next sections to have a running Nagios 4 monitoring server on Ubuntu 20.04 Linux machine.
+
+*** Step 1: Update System
+
+// Run the update commands on your Ubuntu system to ensure you’re on the latest release.
+$ sudo apt update && sudo apt upgrade
+
+// It is recommended to reboot if no service will be impacted.
+$ sudo systemctl reboot
+
+*** Step 2: Install the required packages
+
+// Once the system is upgraded and rebooted. You’ll need to install the packages required to build Nagios Core on Ubuntu Linux.
+$ sudo apt update
+$ sudo apt install wget unzip vim curl openssl build-essential libgd-dev libssl-dev libapache2-mod-php php-gd php apache2
+
+*** Step 3: Download Nagios Core on Ubuntu 20.04
+
+// Check the releases page for latest Nagios available.
+$ export VER="4.4.6"
+$ curl -SL https://github.com/NagiosEnterprises/nagioscore/releases/download/nagios-$VER/nagios-$VER.tar.gz | tar -xzf -
+// The command will download and extract the Nagios core archive to your current working directory.
+
+// Change to created Nagios folder.
+$ cd nagios-$VER
+
+*** Step 4: Install Nagios Core 4.x on Ubuntu 20.04
+
+// After extracting the archive, run the configure script:
+$ ./configure
+
+// Run the make command with all option to compile the main program and CGIs.
+$ sudo make all
+
+// Create User And Group:
+$ sudo make install-groups-users
+$ sudo usermod -a -G nagios www-data
+
+// Install Nagios Core 4.x on Ubuntu 20.04:
+$ sudo make install
+
+// Install the init script in /lib/systemd/system,
+$ sudo make install-daemoninit
+
+// Install and configures permissions on the directory for holding the external command file:
+$ sudo make install-commandmode
+
+// Install sample config files in /usr/local/nagios/etc.
+$ sudo make install-config
+
+// Install the Apache config file for the Nagios web interface:
+$ sudo make install-webconf
+$ sudo a2enmod rewrite cgi
+$ sudo systemctl restart apache2
+
+// Install the Exfoliation theme for the Nagios web interface.
+
+$ sudo make install-exfoliation
+
+// If you want to use classic Nagios theme, run:
+
+$ sudo make install-classicui
+
+*** Step 5: Create Nagios Web user
+
+// A user is required for the access to Nagios web console.
+
+$ sudo htpasswd -c /usr/local/nagios/etc/htpasswd.users nagiosadmin
+New password: 
+Re-type new password: 
+Adding password for user nagiosadmin
+The htpasswd has been used to generate the password and write it to the /usr/local/nagios/etc/htpasswd.users file.
+
+*** Step 6: Install Nagios Plugins on Ubuntu 20.04
+
+// Nagios plugins are used to extend Nagios monitoring features. Let’s ensure they are installed. Check for the latest release of Nagios plugins  from Github releases page.
+$ cd ~/
+$ VER="2.3.3"
+$ curl -SL https://github.com/nagios-plugins/nagios-plugins/releases/download/release-$VER/nagios-plugins-$VER.tar.gz | tar -xzf -
+
+// Change to the plugins source directory:
+$ cd nagios-plugins-$VER
+
+// Compile and install Nagios plugins by running commands below.
+$ ./configure --with-nagios-user=nagios --with-nagios-group=nagios
+$ make
+$ sudo make install
+
+*** Step 7: Verify installation and Start Nagios service
+
+// Confirm that your Nagios installation was successful on Ubuntu 20.04 Linux machine.
+$ sudo /usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg
+
+// You should get an output similar to below if installation of Nagios was successful.
+
+Nagios Core 4.4.6
+Copyright (c) 2009-present Nagios Core Development Team and Community Contributors
+Copyright (c) 1999-2009 Ethan Galstad
+Last Modified: 2020-04-28
+License: GPL
+
+Website: https://www.nagios.org
+Reading configuration data...
+   Read main config file okay...
+   Read object config files okay...
+
+Running pre-flight check on configuration data...
+
+Checking objects...
+	Checked 8 services.
+	Checked 1 hosts.
+	Checked 1 host groups.
+	Checked 0 service groups.
+	Checked 1 contacts.
+	Checked 1 contact groups.
+	Checked 24 commands.
+	Checked 5 time periods.
+	Checked 0 host escalations.
+	Checked 0 service escalations.
+Checking for circular paths...
+	Checked 1 hosts
+	Checked 0 service dependencies
+	Checked 0 host dependencies
+	Checked 5 timeperiods
+Checking global event handlers...
+Checking obsessive compulsive processor commands...
+Checking misc settings...
+
+Total Warnings: 0
+Total Errors:   0
+
+Things look okay - No serious problems were detected during the pre-flight check
+
+// Start and enable nagios service to start at boot.
+$ sudo systemctl  enable --now nagios
+
+// Confirm that nagios service is running.
+$ systemctl status nagios
+
+● nagios.service - Nagios Core 4.4.6
+Loaded: loaded (/lib/systemd/system/nagios.service; enabled; vendor preset: enabled)
+Active: active (running) since Sun 2020-05-17 16:45:23 UTC; 37s ago
+Docs: https://www.nagios.org/documentation
+Process: 35008 ExecStartPre=/usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg (code=exited, status=0/SUCCESS)
+Process: 35009 ExecStart=/usr/local/nagios/bin/nagios -d /usr/local/nagios/etc/nagios.cfg (code=exited, status=0/SUCCESS)
+Main PID: 35010 (nagios)
+Tasks: 6 (limit: 2344)
+Memory: 2.4M
+CGroup: /system.slice/nagios.service
+├─35010 /usr/local/nagios/bin/nagios -d /usr/local/nagios/etc/nagios.cfg
+├─35011 /usr/local/nagios/bin/nagios --worker /usr/local/nagios/var/rw/nagios.qh
+├─35012 /usr/local/nagios/bin/nagios --worker /usr/local/nagios/var/rw/nagios.qh
+├─35013 /usr/local/nagios/bin/nagios --worker /usr/local/nagios/var/rw/nagios.qh
+├─35014 /usr/local/nagios/bin/nagios --worker /usr/local/nagios/var/rw/nagios.qh
+└─35030 /usr/local/nagios/bin/nagios -d /usr/local/nagios/etc/nagios.cfg
+May 17 16:45:23 ubuntu20 nagios[35010]: qh: Socket '/usr/local/nagios/var/rw/nagios.qh' successfully initialized
+May 17 16:45:23 ubuntu20 nagios[35010]: qh: core query handler registered
+May 17 16:45:23 ubuntu20 nagios[35010]: qh: echo service query handler registered
+May 17 16:45:23 ubuntu20 nagios[35010]: qh: help for the query handler registered
+May 17 16:45:23 ubuntu20 nagios[35010]: wproc: Successfully registered manager as @wproc with query handler
+May 17 16:45:23 ubuntu20 nagios[35010]: wproc: Registry request: name=Core Worker 35014;pid=35014
+May 17 16:45:23 ubuntu20 nagios[35010]: wproc: Registry request: name=Core Worker 35013;pid=35013
+May 17 16:45:23 ubuntu20 nagios[35010]: wproc: Registry request: name=Core Worker 35012;pid=35012
+May 17 16:45:23 ubuntu20 nagios[35010]: wproc: Registry request: name=Core Worker 35011;pid=35011
+May 17 16:45:24 ubuntu20 nagios[35010]: Successfully launched command file worker with pid 35030
+
+*** Step 8: Access Nagios Web Dashboard
+
+// if you have ufw firewall, allow http and https ports for inbound traffic.
+$ for i in http https ssh; do sudo ufw allow $i; done
+
+// Now use your browser to access the Nagios dashboard on http:[IP/hostname/localhost]/nagios/
+Input the credentials for the user created earlier
+Username: nagiosadmin
+password: parvez
+
+// You should get to Nagios Administration dashboard.
+
+*** We hope this guide helped you to install Nagios 4 on Ubuntu 20.04. The next reading is monitoring for your IT environment.
+
